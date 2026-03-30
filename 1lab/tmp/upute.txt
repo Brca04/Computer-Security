@@ -1,0 +1,47 @@
+1. OPIS SUSTAVA
+
+Sustav za pohranu zaporki ostvaren je korištenjem simetričnog kriptiranja i
+funkcije za derivaciju ključa. Korišteni oblik simetričnog kriptiranja je AES u GCM načinu rada. AES je blok
+šifra (128 bita) zasnovana na supstitucijsko-permutacijskoj mreži.
+
+Ključ koji se koristi za enkripciju podataka deriviran je iz glavne (master)
+zaporke pomoću PBKDF2 algoritma. Parametri derivacije ključa:
+  - Salt: 16 nasumičnih bajtova
+  - Duljina ključa: 32 bajta
+  - Broj iteracija: 1 000 000
+  - Funkcija sažetka: HMAC-SHA-512
+
+Svi podaci (zaporke i adrese) moraju zadovoljiti sljedeća pravila:
+  - Duljina: manje od 256 znakova
+  - Skup znakova: ispisivi neprazni ASCII znakovi (kodovi 33–126 uključivo)
+
+Baza podataka pohranjuje se u obliku JSON datoteke.
+
+2. RAD SUSTAVA
+
+Inicijalizacija
+  Prilikom pokretanja sustava stvara se nova baza podataka. Baza se kriptira
+  AES-om uz pomoć deriviranog ključa te se vrijednost salta zapisuje zajedno
+  s kriptiranim sadržajem.
+
+Dodavanje zaporki
+  Kriptirana baza čita se iz JSON datoteke i dekriptira uz pomoć glavne
+  zaporke. U dekriptiranu bazu upisuje se nova adresa i zaporka, nakon čega
+  se baza iznova kriptira i pohranjuje u JSON datoteku.
+
+Čitanje zaporki
+  Postupak je identičan dodavanju: baza se dekriptira, zatim se iz nje čitaju
+  traženi podaci, te se baza ponovno kriptira i pohranjuje u JSON datoteku.
+
+3. SIGURNOSNI ZAHTJEVI
+
+Povjerljivost
+  Osigurana na tri razine:
+  1. Zaporke i adrese nikada se ne pohranjuju u dekriptiranom obliku.
+  2. JSON datoteka koja sadržava bazu podataka u cijelosti je kriptirana.
+  3. Baza podataka iznova se kriptira pri svakoj izmjeni.
+
+Integritet
+  Osiguran pomoću HMAC-SHA-512 mehanizma. Svaki pokušaj swap napada ili bilo
+  kakve neovlaštene izmjene podataka rezultirat će neuspješnom HMAC provjerom,
+  čime se sprječava nedetektirana manipulacija bazom.
