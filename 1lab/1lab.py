@@ -1,5 +1,5 @@
 # 1. laboratorijska vjezba iz kolegija Sigurnost računalnih sustava
-# Bruno Cavor, 0036557489
+# Bruno Cavor
 
 import json
 import base64
