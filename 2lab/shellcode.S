@@ -1,6 +1,6 @@
 #include <sys/syscall.h>
 
-/* naredbe redom:
+/* naredbe za pokretanje:
 1. touch ~/grades.txt
 2. ls ~/grades.txt - provjera
 3. make
