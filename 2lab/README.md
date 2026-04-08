@@ -8,7 +8,7 @@ nano ~/lab/exploit-1.txt
 ## Task 2 - Crash the server
 ```bash
 ./clean-env.sh ./zookd 8080 &
-./exploit-2.py localhost 8080
+chmod +x ~/lab/exploit-2.py
 make check-crash
 ```
 
@@ -24,7 +24,7 @@ ls ~/grades.txt
 ```bash
 ./clean-env.sh ./zookd-exstack 8080 &
 touch ~/grades.txt
-./exploit-4.py localhost 8080
-ls ~/grades.txt
+chmod +x ~/lab/exploit-4.py
 make check-exstack
+ls ~/grades.txt
 ```
