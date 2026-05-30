@@ -1,0 +1,101 @@
+SRS - 4. laboratorijska vjezba
+Bruno Cavor
+
+============================================================================
+1. Arhitektura sustava
+============================================================================
+- Mreza je podijeljena na tri dijela, a vatrozid (cvor FW) je usmjeritelj koji ih povezuje:
+
+- DMZ (203.0.113.0/26)   
+	- dns-server 203.0.113.10
+	- web-server 203.0.113.20
+	- FW je u DMZ-u prikljucen suceljem eth2 (203.0.113.1)
+
+- Private (203.0.113.64/26)
+	- db 203.0.113.100, admin 203.0.113.120,
+	- pc 203.0.113.121
+	- FW je prikljucen suceljem eth1 (203.0.113.65)
+
+- Internet
+	- FW sucelje eth0 (10.0.0.2) prema usmjeritelju r1
+	- server (198.51.100.80)
+	- client (192.168.1.21)
+
+- DMZ i Private su dvije /26 podmreze unutar zajednickog 203.0.113.0/24
+- bilo koja adresa izvan lokalne mreze (Internet) u pravilima izrazen negacijom cijele /24 podmreze: ! -d 203.0.113.0/24
+
+============================================================================
+2. Opis vatrozida
+============================================================================
+
+- konfiguriran na nacin da sve zabrani, pa propusti samo ono sto se trazi (default deny / whitelist)
+- pocetne politike sva tri lanca (INPUT, FORWARD, OUTPUT) postavljene su na DROP
+- sve sto nije eksplicitno dozvoljeno, odbacuje se prema pocetnoj politici
+- vatrozid radi kao paket filter te odrzava stanje
+- u svakom lancu na pocetku stoji pravilo koje propusta promet stanja ESTABLISHED,RELATED
+	- automatsko vracanje odgovora na svaku vec dopustenu vezu (TCP potvrde, UDP/DNS odgovori),
+    	  pa je za svaku dopustenu vezu dovoljno napisati JEDNO pravilo za smjer u kojem
+    	  se veza zapocinje (stanje NEW)
+- promet stanja INVALID se odmah postavlja na DROP
+
+INPUT (promet namijenjen samom FW-u)
+  - dopusten je loopback i vec uspostavljene veze
+  - dopusten je SSH (tcp/22) iskljucivo s racunala admin (203.0.113.120)
+  - sve ostale usluge/portovi na FW-u zabranjeni su pocetnom politikom
+
+OUTPUT (promet koji FW sam generira)
+  - dopusten je loopback
+  - dopusteni su ESTABLISHED,RELATED - FW moze odgovarati na dolazni admin SSH, ali ne moze sam otvarati veze
+
+FORWARD (promet koji prolazi KROZ vatrozid)
+  - db -j DROP - db ne smije nista inicirati
+  - javne DMZ usluge - web-server tcp/80 i tcp/443 te dns-server tcp/53 i udp/53 dostupni su s BILO KOJE adrese
+  - SSH na DMZ - tcp/22 na web-server i dns-server dopusten samo s admin
+  - web-server -> db - jedini ulaz iz DMZ-a u Private je web-server na db tcp/10000
+  - SSH na db - dopusten samo iz mreze Private
+  - dns-server -> Internet - dns-server smije slati DNS upite (udp/53, tcp/53) bilo gdje na Internetu, a sve ostalo mu je zabranjeno
+  - Private -> Internet - racunala iz Private mreze pristupaju Internetu samo protokolom HTTP/HTTPS (tcp/80, tcp/443)
+- parovi pc<->db, admin<->db, admin<->pc te dns<->web oznacavaju promet koji se ne moze filtrirati vatrzidom - njihov promet nikada ne prolazi kroz usmjeritelj FW
+
+============================================================================
+3. Provjera ispravnosti
+============================================================================
+
+- dostupnost usluga provjerena je prije i poslije ucitavanja vatrozida
+- prije konfiguracije skeniranje nmap-om (npr. nmap -p20-25,53,80,443 203.0.113.20) pokazuje sve automatski pokrenute usluge (Telnet, FTP, SSH, HTTP)
+- nakon ucitavanja vatrozida ostaju otvoreni samo trazeni portovi (na web-serveru 80 i 443, na dns-serveru 53)
+
+============================================================================
+4. Analiza snimljenog prometa
+============================================================================
+
+- promet je analiziran uz pomoc alata WireShark
+- kod TCP SYN ("half-open") skeniranja skener salje samo SYN segment
+- otovren port odgovara s SYN,ACK
+- zatvoren port odgovara s RST,ACK
+- filtriran port ne odgovara
+
+- snimka sadrzi 14 TCP paketa
+	- 8 cistih SYN (sonde)
+	- 3 SYN,ACK (odgovori)
+	- 3 RST
+
+- skener je poslao po jedan SYN na portove 21, 22, 23, 25, 53, 80, 443 i 8080
+- posluzitelj je s SYN,ACK odgovorio samo na portovima 22, 80 i 443
+- skener odmah nakon toga na svaki od ta tri porta poslao RST (prekid veze bez dovrsavanja rukovanja)
+
+============================================================================
+5. Odgovori na pitanja
+============================================================================
+
+- S kojih IP adresa se izvodi skeniranje? (uz pomoc filtera tcp.flags.syn==1 && tcp.flags.ack==0, gledamo Source)
+	10.26.163.192
+
+- Koje IP adrese se skeniraju? (uz pomoc filtera tcp.flags.syn==1 && tcp.flags.ack==0, gledamo Destination)
+	10.26.163.236
+
+- Koji skenirani TCP portovi su OTVORENI? (uz pomoc filtera tcp.flags.syn==1 && tcp.flags.ack==1, gledamo Info)
+	22, 80 i 443 
+
+- Koji skenirani TCP portovi su ZATVORENI? (uz pomoc filtera tcp.flags.reset==1 && tcp.flags.ack==1, gledamo Info)
+	Nijedan port nije zatvoren: posluzitelj (10.26.163.236) ni na jednom portu nije odgovorio s RST,ACK. Tri RST paketa u snimci dolaze od skenera (10.26.163.192) i sluze prekidanju veza na otvorenim portovima. Portovi 21, 23, 25, 	53 i 8080 nisu dobili nikakav odgovor, sto odgovara filtriranim portovima (odgovor je izostao u ovom dijelu snimljenog prometa).
